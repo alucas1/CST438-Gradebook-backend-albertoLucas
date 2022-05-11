@@ -12,11 +12,14 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.util.LinkedMultiValueMap;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.cst438.controllers.GradeBookController;
@@ -242,6 +245,148 @@ public class JunitTestGradebook {
 		updatedag.setScore("88");
 		verify(assignmentGradeRepository, times(1)).save(updatedag);
 	}
+
+	//========================WEEK 2 WORK - START =========================================
+	// As an instructor for a course , I can add a new assignment for my course.  
+	// The assignment has a name and a due date.
+	@Test
+	public void addAssignment() throws Exception {
+		MockHttpServletResponse response;
+
+		// mock database data
+
+		Course course = new Course();
+		course.setCourse_id(TEST_COURSE_ID);
+		course.setSemester(TEST_SEMESTER);
+		course.setYear(TEST_YEAR);
+		course.setInstructor(TEST_INSTRUCTOR_EMAIL);
+		course.setEnrollments(new java.util.ArrayList<Enrollment>());
+		course.setAssignments(new java.util.ArrayList<Assignment>());
+
+		// given -- stubs for database repositories that return test data
+		given(courseRepository.findById(TEST_COURSE_ID)).willReturn(Optional.of(course));
+
+		// end of mock data
+		
+		LinkedMultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
+		requestParams.add("assignment_name", "testAssign");
+		requestParams.add("due_date", "2022-08-01");
+		
+		// http post request - For an invalid course
+		response = mvc.perform(MockMvcRequestBuilders.post("/course/404/addAssignment").params(requestParams))
+				.andReturn().getResponse();		
+		// verify bad request
+		assertEquals(400, response.getStatus());	
+		// verify that a save was not called on repository
+		verify(assignmentRepository, times(0)).save(any());	
+		
+		// http post request - For a valid course
+		response = mvc.perform(MockMvcRequestBuilders.post("/course/40442/addAssignment").params(requestParams))
+				.andReturn().getResponse();
+		// verify OK status
+		assertEquals(200, response.getStatus());
+		// verify that a save was called on repository
+		verify(assignmentRepository).save(any(Assignment.class));
+	}
+	
+	// As an instructor, I can change the name of the assignment for my course.
+	@Test
+	public void updateAssignmentName() throws Exception {
+		MockHttpServletResponse response;
+
+		// mock database data
+		Course course = new Course();
+		course.setCourse_id(TEST_COURSE_ID);
+		course.setSemester(TEST_SEMESTER);
+		course.setYear(TEST_YEAR);
+		course.setInstructor(TEST_INSTRUCTOR_EMAIL);
+		course.setEnrollments(new java.util.ArrayList<Enrollment>());
+		course.setAssignments(new java.util.ArrayList<Assignment>());
+
+		Assignment assignment = new Assignment();
+		assignment.setCourse(course);
+		course.getAssignments().add(assignment);
+		// set dueDate to 1 week before now.
+		assignment.setDueDate(new java.sql.Date(System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000));
+		assignment.setId(1);
+		assignment.setName("Assignment 1");
+		assignment.setNeedsGrading(1);
+
+		// given -- stubs for database repositories that return test data
+		given(assignmentRepository.findById(1)).willReturn(Optional.of(assignment));
+
+		LinkedMultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
+		requestParams.add("assignment_name", "testAssignUpdated");	
+		
+		// end of mock data
+		
+		// http put request - For an invalid assignment 
+		response = mvc.perform(MockMvcRequestBuilders.put("/assignment/404/updateName").params(requestParams))
+				.andReturn().getResponse();		
+		// verify Bad Request status
+		assertEquals(400, response.getStatus());
+		// verify that a save was not called on repository
+		verify(assignmentRepository, times(0)).save(any());	
+		
+		
+		// http put request - For a valid assignment
+		response = mvc.perform(MockMvcRequestBuilders.put("/assignment/1/updateName").params(requestParams))
+				.andReturn().getResponse();
+		// verify OK status
+		assertEquals(200, response.getStatus());
+		// verify that a save was called on repository
+		verify(assignmentRepository).save(any(Assignment.class));
+	}
+	
+	// As an instructor, I can delete an assignment 
+	// for my course (only if there are no grades for the assignment).
+	@Test
+	public void deleteAssignment() throws Exception {
+		MockHttpServletResponse response;
+
+		// mock database data
+
+		Course course = new Course();
+		course.setCourse_id(TEST_COURSE_ID);
+		course.setSemester(TEST_SEMESTER);
+		course.setYear(TEST_YEAR);
+		course.setInstructor(TEST_INSTRUCTOR_EMAIL);
+		course.setEnrollments(new java.util.ArrayList<Enrollment>());
+		course.setAssignments(new java.util.ArrayList<Assignment>());
+
+		Assignment assignment = new Assignment();
+		assignment.setCourse(course);
+		course.getAssignments().add(assignment);
+		// set dueDate to 1 week before now.
+		assignment.setDueDate(new java.sql.Date(System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000));
+		assignment.setId(1);
+		assignment.setName("Assignment 1");
+		assignment.setNeedsGrading(1);
+
+		// given -- stubs for database repositories that return test data
+		given(assignmentRepository.findById(1)).willReturn(Optional.of(assignment));
+		
+		// http delete request - For an invalid assignment
+		response = mvc.perform(MockMvcRequestBuilders.delete("/assignment/404/delete"))
+				.andReturn().getResponse();		
+		// verify bad request
+		assertEquals(400, response.getStatus());	
+		// verify that a delete was not called on repository
+		verify(assignmentRepository, times(0)).delete(any(Assignment.class));	
+		
+		// http delete request - For a valid assignment
+		response = mvc.perform(MockMvcRequestBuilders.delete("/assignment/1/delete"))
+				.andReturn().getResponse();		
+		// verify OK request
+		assertEquals(200, response.getStatus());	
+		// verify that a delete was  called on repository
+		verify(assignmentRepository).delete(any(Assignment.class));
+		
+		
+}
+	
+	//=========================WEEK 2 WORK - END================================
+
 
 	private static String asJsonString(final Object obj) {
 		try {
