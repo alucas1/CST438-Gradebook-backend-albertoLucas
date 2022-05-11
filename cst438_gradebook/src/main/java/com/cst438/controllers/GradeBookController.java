@@ -1,17 +1,21 @@
 package com.cst438.controllers;
-
+ 
 import java.util.ArrayList;
+import java.sql.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -170,4 +174,64 @@ public class GradeBookController {
 		return assignment;
 	}
 
+	//========================WEEK 2 WORK - START =========================================
+	// As an instructor for a course , I can add a new assignment for my course.  
+	// The assignment has a name and a due date.
+	@PostMapping("/course/{course_id}/addAssignment")
+	@Transactional
+	public void addAssignment(@PathVariable int course_id, @RequestParam String assignment_name, @RequestParam String due_date) {
+		// check that this request is from the course instructor and for a valid course
+		String email = "dwisneski@csumb.edu";  // user name (should be instructor's email) 
+		Course c = courseRepository.findById(course_id).orElse(null);
+		if (c == null) {
+			throw new ResponseStatusException( HttpStatus.BAD_REQUEST, "Course does not exist. " );
+		}
+		if (!c.getInstructor().equals(email)) {
+			throw new ResponseStatusException( HttpStatus.UNAUTHORIZED, "Not Authorized. " );
+		}
+		
+		
+		Assignment assignment = new Assignment();
+		assignment.setCourse(c);
+		assignment.setName(assignment_name);
+		assignment.setNeedsGrading(1);
+		assignment.setDueDate(Date.valueOf(due_date));
+
+		assignmentRepository.save(assignment);
+	}	
+	
+	// As an instructor, I can change the name of the assignment for my course.
+	@PutMapping("/assignment/{assignment_id}/updateName")
+	@Transactional
+	public void updateAssignmentName(@PathVariable int assignment_id, @RequestParam String assignment_name) {
+		String email = "dwisneski@csumb.edu";  // user name (should be instructor's email) 
+		checkAssignment(assignment_id, email);  // check that user name matches instructor email of the course.
+		
+		Assignment assignment = assignmentRepository.findById(assignment_id).orElse(null);
+		
+		assignment.setName(assignment_name);
+
+		assignmentRepository.save(assignment);
+	}
+	
+	// As an instructor, I can delete an assignment 
+	// for my course (only if there are no grades for the assignment).
+	@DeleteMapping("/assignment/{assignment_id}/delete")
+	@Transactional
+	public void deleteAssignment(@PathVariable int assignment_id) {
+		String email = "dwisneski@csumb.edu";  // user name (should be instructor's email) 
+		checkAssignment(assignment_id, email);  // check that user name matches instructor email of the course.
+		
+		List<AssignmentGrade> ag = assignmentGradeRepository.findByAssignmentId(assignment_id);
+		System.out.print("list " + ag + " end list\n");
+		
+		if (ag.size() != 0) {
+			throw new ResponseStatusException( HttpStatus.BAD_REQUEST, "Cannot Delete - grades exist "+assignment_id);
+		} else {
+			Assignment assignmentToDelete = assignmentRepository.findById(assignment_id).orElse(null);
+			assignmentRepository.delete(assignmentToDelete);
+		}
+		
+	}
+	//=========================WEEK 2 WORK - END================================
 }
