@@ -19,8 +19,11 @@ public class RegistrationServiceREST extends RegistrationService {
 	
 	@Override
 	public void sendFinalGrades(int course_id , CourseDTOG courseDTO) { 
+		//Print log
+		System.out.println("Sending REST message: " + courseDTO);
+		System.out.println("Link: " + registration_url + "/course/" + course_id);
 		
-		//TODO  complete this method in homework 4
-		
+		//Send Message as REST
+		restTemplate.postForEntity(registration_url + "/course/" + course_id, courseDTO, CourseDTOG.class);  	
 	}
 }
