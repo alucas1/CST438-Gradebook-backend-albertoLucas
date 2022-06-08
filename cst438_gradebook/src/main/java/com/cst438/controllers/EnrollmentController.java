@@ -4,6 +4,8 @@ import java.sql.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,9 +34,9 @@ public class EnrollmentController {
 	 */
 	@PostMapping("/enrollment")
 	@Transactional
-	public EnrollmentDTO addEnrollment(@RequestBody EnrollmentDTO enrollmentDTO) {
+	public EnrollmentDTO addEnrollment(@RequestBody EnrollmentDTO enrollmentDTO, @AuthenticationPrincipal OAuth2User principal) {
 		// check that this request is from the course instructor and for a valid course
-		String email = "dwisneski@csumb.edu";  // user name (should be instructor's email) 
+		String email = principal.getAttribute("email");   // user name (should be instructor's email) 
 
 		//Grab variables from enrollmentDTO
 		int id = enrollmentDTO.id;
